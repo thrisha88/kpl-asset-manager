@@ -1,0 +1,29 @@
+<!-- templates/upload_asset.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Asset File</title>
+</head>
+<body>
+
+    <!-- Flash message block -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div style="color: {% if category == 'success' %}green{% else %}red{% endif %};">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <h2>Upload Excel File</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="asset_file" accept=".xlsx" required>
+        <button type="submit">Upload</button>
+    </form>
+    <br>
+    <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+
+</body>
+</html>

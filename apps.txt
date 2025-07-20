@@ -1,0 +1,70 @@
+# app.py
+from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash
+from werkzeug.utils import secure_filename
+import os
+import pandas as pd
+from datetime import datetime
+from openpyxl import load_workbook
+
+app = Flask(__name__)
+app.secret_key = 'your_secret_key'
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+EXCEL_FILE = 'master_data.xlsx'
+
+# Ensure master_data.xlsx exists
+if not os.path.exists(EXCEL_FILE):
+    df = pd.DataFrame(columns=['Asset Name', 'Asset Type', 'Model', 'Installation Date', 'Working Condition',
+                               'Installation Status', 'Location', 'Warranty', 'Vendor', 'Last Updated By', 'Timestamp'])
+    df.to_excel(EXCEL_FILE, index=False)
+
+@app.route('/')
+def home():
+    return redirect(url_for('login'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        if email == 'admin@kpl.com' and password == 'admin':
+            session['user'] = email
+            session['role'] = 'admin'
+            return redirect(url_for('dashboard'))
+        elif email == 'user@kpl.com' and password == 'user':
+            session['user'] = email
+            session['role'] = 'user'
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Invalid credentials')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+@app.route('/dashboard')
+def dashboard():
+    df = pd.read_excel(EXCEL_FILE)
+    return render_template('dashboard.html', tables=[df.to_html(classes='table table-bordered table-striped', index=False)], role=session.get('role'))
+
+@app.route('/upload_asset', methods=['GET', 'POST'])
+def upload_asset():
+    if session.get('role') != 'admin':
+        flash('Access denied: Only admin can upload assets.')
+        return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        data = request.form.to_dict()
+        data['Last Updated By'] = session.get('user')
+        data['Timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        df = pd.read_excel(EXCEL_FILE)
+        df = df.append(data, ignore_index=True)
+        df.to_excel(EXCEL_FILE, index=False)
+        flash('Asset uploaded successfully!')
+        return redirect(url_for('dashboard'))
+    return render_template('upload.html')
+
+if __name__ == '__main__':
+    app.run(debug=True)
