@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import os
 from datetime import datetime, timedelta
 from openpyxl import load_workbook, Workbook
+from openpyxl.drawing.image import Image as XLImage
 from fpdf import FPDF
 import pandas as pd
 import tempfile
@@ -11,6 +12,7 @@ app.secret_key = 'your_secret_key'
 
 MASTER_FILE = "master_data.xlsx"
 USER_FILE = "users.xlsx"
+LOGO_PATH = os.path.join("static", "logo.png")
 
 # ------------------ Utility Functions ------------------
 
@@ -145,10 +147,10 @@ def add_asset():
         return redirect(url_for('dashboard'))
 
     fields = [
-        "Asset ID", "Asset Name", "Vendor", "Make", "Model","Serial Number",
-        "Installed Date", "Installation Status","Warranty Start Date","Warranty End Date",
-        "Location Installed","Repair Status","Repair Description","Location Image",
-        "Last Updated Date","Last Updated User"
+        "Asset ID", "Asset Name", "Vendor", "Make", "Model", "Serial Number",
+        "Installed Date", "Installation Status", "Warranty Start Date", "Warranty End Date",
+        "Location Installed", "Repair Status", "Repair Description", "Location Image",
+        "Last Updated Date", "Last Updated User"
     ]
     new_data = {field: request.form.get(field.replace(" ", "_").lower(), "") for field in fields}
     new_data["Last Updated Date"] = datetime.now().strftime("%Y-%m-%d")
@@ -164,6 +166,15 @@ def add_asset():
     flash("Asset added successfully", "success")
     return redirect(url_for('dashboard'))
 
+# ---------- PDF Export with Logo ----------
+class PDFWithLogo(FPDF):
+    def header(self):
+        if os.path.exists(LOGO_PATH):
+            self.image(LOGO_PATH, x=250, y=8, w=30)
+        self.set_font("Arial", 'B', 14)
+        self.cell(0, 10, 'KPL Asset Report', border=False, ln=True, align='C')
+        self.ln(5)
+
 @app.route('/export_pdf')
 def export_pdf():
     if 'user' not in session:
@@ -174,11 +185,8 @@ def export_pdf():
         flash("No data available to export", "warning")
         return redirect(url_for('dashboard'))
 
-    pdf = FPDF(orientation='L', unit='mm', format='A4')
+    pdf = PDFWithLogo(orientation='L', unit='mm', format='A4')
     pdf.add_page()
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 10, "KPL Asset Report", ln=True, align='C')
-    pdf.ln(4)
 
     headers = list(data[0].keys())
     col_width = 270 / len(headers)
@@ -198,6 +206,7 @@ def export_pdf():
     pdf.output(tmp.name)
     return send_file(tmp.name, as_attachment=True, download_name="KPL_Asset_Report.pdf")
 
+# ---------- Excel Export with Logo ----------
 @app.route('/export/excel')
 def export_excel():
     if 'user' not in session:
@@ -209,15 +218,20 @@ def export_excel():
         return redirect(url_for('dashboard'))
 
     df = pd.DataFrame(data)
-
-    # Convert specific date fields to 'YYYY-MM-DD' format
     date_fields = ["Installed Date", "Warranty Start Date", "Warranty End Date", "Last Updated Date"]
     for col in date_fields:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors='coerce').dt.strftime('%Y-%m-%d')
 
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
-    df.to_excel(tmp.name, index=False)
+    with pd.ExcelWriter(tmp.name, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, startrow=5, sheet_name="KPL Report")
+        ws = writer.book["KPL Report"]
+        if os.path.exists(LOGO_PATH):
+            img = XLImage(LOGO_PATH)
+            img.width, img.height = 150, 60
+            ws.add_image(img, "A1")
+
     return send_file(tmp.name, as_attachment=True, download_name="KPL_Asset_Report.xlsx")
 
 @app.route('/logout')
