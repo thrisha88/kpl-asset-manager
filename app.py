@@ -146,7 +146,8 @@ def add_asset():
 
     fields = [
         "Asset ID", "Asset Name", "Vendor", "Make", "Model","Serial Number",
-        "Installed Date", "Installation Status","Warranty Start Date","Warranty End Date","Location Installed","Repair Status","Repair Description","Location Image",
+        "Installed Date", "Installation Status","Warranty Start Date","Warranty End Date",
+        "Location Installed","Repair Status","Repair Description","Location Image",
         "Last Updated Date","Last Updated User"
     ]
     new_data = {field: request.form.get(field.replace(" ", "_").lower(), "") for field in fields}
@@ -208,6 +209,13 @@ def export_excel():
         return redirect(url_for('dashboard'))
 
     df = pd.DataFrame(data)
+
+    # Convert specific date fields to 'YYYY-MM-DD' format
+    date_fields = ["Installed Date", "Warranty Start Date", "Warranty End Date", "Last Updated Date"]
+    for col in date_fields:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors='coerce').dt.strftime('%Y-%m-%d')
+
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
     df.to_excel(tmp.name, index=False)
     return send_file(tmp.name, as_attachment=True, download_name="KPL_Asset_Report.xlsx")
