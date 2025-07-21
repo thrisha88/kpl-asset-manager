@@ -166,14 +166,14 @@ def add_asset():
     flash("Asset added successfully", "success")
     return redirect(url_for('dashboard'))
 
-# ---------- PDF Export with Logo ----------
+# ---------- PDF Export with Logo (LEFT) ----------
 class PDFWithLogo(FPDF):
     def header(self):
         if os.path.exists(LOGO_PATH):
-            self.image(LOGO_PATH, x=250, y=8, w=30)
+            self.image(LOGO_PATH, x=10, y=8, w=30)  # logo on the LEFT
         self.set_font("Arial", 'B', 14)
         self.cell(0, 10, 'KPL Asset Report', border=False, ln=True, align='C')
-        self.ln(5)
+        self.ln(10)
 
 @app.route('/export_pdf')
 def export_pdf():
@@ -206,7 +206,7 @@ def export_pdf():
     pdf.output(tmp.name)
     return send_file(tmp.name, as_attachment=True, download_name="KPL_Asset_Report.pdf")
 
-# ---------- Excel Export with Logo ----------
+# ---------- Excel Export with Logo (TOP LEFT) ----------
 @app.route('/export/excel')
 def export_excel():
     if 'user' not in session:
@@ -225,7 +225,7 @@ def export_excel():
 
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
     with pd.ExcelWriter(tmp.name, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, startrow=5, sheet_name="KPL Report")
+        df.to_excel(writer, index=False, startrow=6, sheet_name="KPL Report")
         ws = writer.book["KPL Report"]
         if os.path.exists(LOGO_PATH):
             img = XLImage(LOGO_PATH)
