@@ -6,8 +6,13 @@
 </head>
 <body>
     <div class="container mt-4">
+
+        <!-- Header with Logo and Title -->
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="text-center flex-grow-1">KPL Asset Manager Dashboard</h2>
+            <div class="d-flex align-items-center">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="KPL Logo" style="height: 60px; margin-right: 15px;">
+                <h2 class="mb-0">KPL Asset Manager Dashboard</h2>
+            </div>
             <a href="/logout" class="btn btn-outline-danger">Logout</a>
         </div>
 
